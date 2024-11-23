@@ -1,0 +1,199 @@
+﻿@page "/droptable"
+@attribute [StreamRendering]
+@using static System.Runtime.InteropServices.JavaScript.JSType;
+
+@inject HttpClient Http
+@using BlazorApp
+
+<PageTitle>Drop Table</PageTitle>
+
+
+<style>
+	table {
+		border: 1px solid black;
+		width: 100%;
+		margin: 10px;
+		border-collapse: collapse;
+		border-spacing: 0
+	}
+
+	td {
+		text-align: left;
+	}
+
+	input, select {
+		width: 100%;
+	}
+
+	input {
+		text-align: right;
+	}
+
+	img {
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+	}
+</style>
+
+<div>
+	<div class="row">
+		<div class="col"></div>
+		<div class="col">
+			<p>Search for monsters or items</p>
+			<input placeholder="" @oninput=UpdateSearch style="text-align: left;" />
+			</div>
+		<div class="col"></div>
+	</div>
+	<div class="row">
+
+	@for (int i = 0; i < 3; i++)
+	{
+		<div class="col-sm-4">
+			@for (int j = i; j < Monster.searchResults.Count; j += 3)
+			{
+				string monsterName = Monster.searchResults[j];
+
+				@if(Monster.monsterData.TryGetValue(monsterName, out MonsterStats monData))
+				{
+					bool foundDropList = Monster.dropTable.TryGetValue(monData.id, out List<string> dropList);
+					<div>
+						<table class="table table-striped">
+							<tbody>
+								<tr>
+									<td colspan="4" class="image">
+										<img src=@Monster.GetMonsterIDString(monData.id.ToString()) style="max-width: 100%; height: auto;" />
+									</td>
+								</tr>
+								<tr>
+									<td width="25%" colspan="1"><strong>@monsterName</strong></td>
+									<td width="25%" colspan="1">Lv. @monData.level</td>
+									@* <td width="50%" colspan="2"><strong>@monData.id</strong></td> *@
+								</tr>
+								<tr>
+									<td>HP</td>
+									<td>@monData.hp</td>
+								</tr>
+								<tr>
+									<td>Exp</td>
+									<td>@monData.exp</td>
+								</tr>
+								<tr>
+									<td>Avoid</td>
+									<td>@monData.avoid</td>
+								</tr>
+								<tr>
+									<td colspan="2">
+										@for (int x = 0; x < monData.ele.Length; x++)
+										{
+											<div class>
+												@monData.GetEleString(x)
+											</div>
+										}
+									</td>
+								</tr>
+								@if (foundDropList)
+								{
+									<tr>
+										<td><strong>Drops:</strong></td>
+									</tr>
+									<tr>
+										<td width="50%" colspan="3" rowspan="4">
+
+											@for (int x = 0; x < dropList.Count; x++)
+											{
+												@if (dropList[x].Contains(searchItem, StringComparison.OrdinalIgnoreCase))
+												{
+													<div style="color: red;">@dropList[x]</div>
+												}
+												else{
+													<div>@dropList[x]</div>
+												}
+											}
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			}
+		</div>
+	}
+	</div>
+</div>
+
+@code {
+	protected string searchItem;
+
+	protected async override Task OnInitializedAsync()
+	{
+		Monster.searchResults.Clear();
+
+		if (Monster.monsterData.Count == 0)
+		{
+			var jsonString = await Http.GetStringAsync("Monsters/monster_stats.json");
+			Monster.InitMonsterData(jsonString);
+		}
+
+		if (Monster.dropTable.Count == 0)
+		{
+			var monsterContent = await Http.GetStringAsync("Monsters/monsters.dt");
+
+			if (monsterContent != null)
+			{
+				if (monsterContent.Length > 0)
+				{
+					Monster.InitMonsterDrops(monsterContent);
+				}
+			}
+		}
+	}
+	protected void UpdateSearch(ChangeEventArgs e)
+	{
+		string? searchIfItem = e.Value?.ToString();
+		Monster.searchResults.Clear();
+		if(searchIfItem == null)
+		{
+			return;
+		}
+
+		searchItem = searchIfItem;
+		if(searchItem.Length > 1)
+		{
+			if (searchItem.Contains("||"))
+			{
+				string[] splitSearch = searchItem.Split("||");
+				for(int i = 0; i < splitSearch.Length; i++){
+					bool startsWith = splitSearch[i].StartsWith(" ");
+					bool endsWith = splitSearch[i].EndsWith(" ");
+					if (startsWith && endsWith)
+					{
+						if (splitSearch[i].Length > 3)
+						{
+							Monster.Search(splitSearch[i].Substring(1, splitSearch[i].Length - 2), true);
+						}
+					}
+					else if (startsWith)
+					{
+						if (splitSearch[i].Length > 2)
+						{
+							Monster.Search(splitSearch[i].Substring(1), true);
+						}
+					}
+					else if (endsWith)
+					{
+						if (splitSearch[i].Length > 2)
+						{
+							Monster.Search(splitSearch[i].Substring(0, splitSearch[i].Length - 1), true);
+						}
+					}
+				}
+			}
+			else
+			{
+				Monster.Search(searchItem, true);
+			}
+		}
+	}
+}

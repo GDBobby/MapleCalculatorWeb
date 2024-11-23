@@ -1,0 +1,10 @@
+.vs/
+*.bak
+BlazorAppWASM/wwwroot/Pictures/
+jsonreparser/build/
+jsonreparser/external/
+jsonreparser/output/
+bin/
+obj/
+x64/
+BlazorAppWASM/node_modules/

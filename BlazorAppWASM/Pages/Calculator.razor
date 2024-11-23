@@ -1,0 +1,760 @@
+﻿@page "/calculator"
+
+@inject HttpClient Http
+@using BlazorApp
+
+<PageTitle>Calculator</PageTitle>
+<style>
+	table {
+		border: 1px solid black;
+		width: 100%;
+		margin: 10px;
+		border-collapse: collapse;
+		border-spacing: 0
+	}
+	dropdown-menu{
+		display: none;
+		position: absolute;
+		background-color: #f9f9f9;
+		min-width: 160px;
+		z-index: 1;
+	}
+
+	dropdown-submenu {
+		position: relative;
+	}
+
+	dropdown-submenu, dropdown-menu {
+		top: 0;
+		left: 100%;
+		margin-top: -5px;
+		display: none;
+		position: absolute;
+	}
+</style>
+
+<h1>Calculator</h1>
+
+<hr />
+<div>
+	<div class="row">
+		<div class="col">
+			<div>
+				<table class="table table-striped">
+					<tr>
+						<th width="50%" colspan="2">
+@* 							<button class="btn btn-primary dropdown-toggle" @onclick="ToggleDropdown">
+								Select Job
+							</button>
+							<div class="dropdown-menu" style="display: @(isDropDownOpen ? "block" : "none")">
+								@for(int i = 0; i < (JobData.firstJobs.Length - 1); i++)
+								{
+									<div class="dropdown-submenu">
+										<a class="dropdown-item dropdown-toggle" @onclick="() => ToggleSubmenu(i)">
+											@JobData.classData[JobData.firstJobs[i]].Name
+										</a>
+										<div class="dropdown-menu" style="display: @(openSubmenus.Contains(i) ? "block" : "none")">
+											@for (int j = JobData.firstJobs[i]; j < JobData.firstJobs[i + 1]; j++)
+											{
+												<a class="dropdown-item" @onclick="() => OnJobSelected(j)">
+											 		@JobData.classData[j].Name;
+												</a>
+											}
+										</div>
+									</div>
+								}
+							</div> *@
+							<select @onchange="OnJobSelected">
+								@for (int i = 0; i < JobData.classData.Length; i++)
+								{
+									<option value="@i">@JobData.classData[i].Name</option>
+								}
+							</select>
+						</th>
+						@if (JobData.classData[currentJob].WeaponIDs.Length > 1) {
+						<th width="50%" colspan="2">
+							<select @onchange="OnWeaponSelected">
+								@for (int i = 0; i < JobData.classData[currentJob].WeaponIDs.Length; i++)
+								{
+									<option value="@i">@Calculation.weaponData[(int)JobData.classData[currentJob].WeaponIDs[i]].name</option>
+								}
+								</select>
+							<img src="@Calculation.weaponData[(int)currentWeapon].imageSource" style="max-width: 100%; height: auto;" />
+						</th>
+						}
+						else
+						{
+						<th width="50%" colspan="2">
+							@Calculation.weaponData[(int)JobData.classData[currentJob].WeaponIDs[0]].name
+							<img src="@Calculation.weaponData[(int)currentWeapon].imageSource" style="max-width: 100%; height: auto;" />
+						</th>
+						}
+					</tr>
+					<tbody>
+						<tr>
+							<td width="25%" colspan="1">Level</td>
+							<td width="25%" colspan="1"><input @bind-value="level" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+						</tr>
+						<tr>
+							<td width="25%" colspan="1">STR</td>
+							<td width="25%" colspan="1"><input @bind-value="str" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+						</tr>
+						<tr>
+							<td width="25%" colspan="1">DEX</td>
+							<td width="25%" colspan="1"><input @bind-value="dex" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+						</tr>
+						<tr>
+							<td width="25%" colspan="1">INT</td>
+							<td width="25%" colspan="1"><input @bind-value="intel" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+						</tr>
+						<tr>
+							<td width="25%" colspan="1">LUK</td>
+							<td width="25%" colspan="1"><input @bind-value="luk" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+						</tr>
+						<tr>
+							
+ 							@if ((int)currentJob >= (int)ClassID.Magician)
+							{
+								<td width="25%" colspan="1">Magic Attack</td>
+								<td width="25%" colspan="1"><input @bind-value="magicAttack" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+								@if (statRatioString.Length > 0)
+								{
+									<td width="12%"><input style="text-align: right;" @bind-value="mattIncrement" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+									<td width="38%">@statRatioString</td>
+								}
+							}
+							else{
+								<td width="25%" colspan="1">Weapon Attack</td>
+								<td width="25%" colspan="1"><input @bind-value="attack" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+								@if (statRatioString.Length > 0)
+								{
+									<td width="12%"><input style="text-align: right;" @bind-value="wattIncrement" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+									<td width="38%">@statRatioString</td>
+								}
+							}
+						</tr>
+
+						<tr>
+ 							@if ((int)currentJob >= (int)ClassID.Magician)
+							{
+								<td width="25%" colspan="1">Spell Mastery</td>
+							}
+							else
+							{
+								<td width="25%" colspan="1">Weapon Mastery</td>
+							}
+							<td width="25%" colspan="1"><input @bind-value="weaponMastery" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+						</tr>
+						<tr>
+							<td width="25%" colspan="1" rowspan="2">Accuracy</td>
+							<td width="25%" colspan="1" rowspan="2"><input @bind-value="accuracy" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+							
+							
+ 							@if ((int)currentJob >= (int)ClassID.Magician)
+							{
+								<td width="25%" colspan="1">Magical Accuracy = @(Math.Floor((double.Parse(intel) + double.Parse(luk)) / 10.0).ToString()) </td>
+							}
+						</tr>
+						<tr>
+							<td></td>
+							<td width="25%" colspan="1" rowspan="1"><button @onclick="CalculateDamage" class="btn btn-primary">Calculate</button></td>
+						</tr>
+						<tr>
+							<td>Damage Range</td>
+							<td>@minDmg ~ @maxDmg</td>
+						</tr>
+						<tr>
+ 							@if ((int)currentJob >= (int)ClassID.Magician)
+							{
+								<td width="25%" colspan="1">Spell Damage</td>
+							}
+							else
+							{
+								<td width="25%" colspan="1">Skill Percentage</td>
+							} 
+								<td width="25%" colspan="1"><input @bind-value="skillPercentage" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+							
+						</tr>
+						<tr>
+							<td width="25%" colspan="1">Skill Lines</td>
+							<td width="25%" colspan="1"><input @bind-value="skillLines" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" /></td>
+						</tr>
+						<tr>
+							<td>
+								Avg Skill Dmg:
+							</td>
+							<td>@skillDPS</td>
+						</tr>
+					</tbody>
+
+				</table>
+			</div>
+		</div>
+		<div class="col">
+			<div class="row">
+				<div class="col">
+					<p style="text-align: right;"><strong>Search Monsters to check accuracy</strong></p>
+				</div>
+				<div class="col">
+					<input placeholder="" @oninput=UpdateSearch style="text-align: left;" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="one-third">
+				</div>
+				<div class="two-third">
+					
+					@for (int j = 0; j < Monster.searchResults.Count; j++)
+					{
+						string monsterName = Monster.searchResults[j];
+
+						@if (Monster.monsterData.TryGetValue(monsterName, out MonsterStats monData))
+						{
+							bool foundAccData = Calculation.accuracyData.TryGetValue(monsterName, out MonsterAccuracyData accData);
+
+							<div>
+								<table class="table table-striped">
+									<tbody>
+										<tr>
+											<td colspan="4" class="image">
+												<img src=@Monster.GetMonsterIDString(monData.id.ToString()) style="max-width: 100%; height: auto;" />
+											</td>
+										</tr>
+										<tr>
+											<td width="25%" colspan="1"><strong>@monsterName</strong></td>
+											<td width="25%" colspan="1">Lv. @monData.level</td>
+											@if (foundAccData)
+											{
+												<td width="25%" colspan="1">Real Accuracy</td>
+												<td width="25%" colspan="1">@(accData.accRatio.ToString("F1"))%</td>
+											}
+											@* <td width="50%" colspan="2"><strong>@monData.id</strong></td> *@
+										</tr>
+										<tr>
+											<td>HP</td>
+											<td>@monData.hp</td>
+											@if (foundAccData)
+											{
+												<td width="25%" colspan="1">Accuracy for 1%</td>
+												<td width="25%" colspan="1">@accData.acc1.ToString("F1")</td>
+											}
+										</tr>
+										<tr>
+											<td width="25%" colspan="1">Exp</td>
+											<td>@monData.exp</td>
+											@if (foundAccData)
+											{
+												<td width="25%" colspan="1">Accuracy for 100%</td>
+												<td width="25%" colspan="1">@accData.acc100.ToString("F1")</td>
+											}
+										</tr>
+										<tr>
+											<td width="25%" colspan="1">Avoid</td>
+											<td>@monData.avoid</td>
+										</tr>
+										<tr>
+											<td colspan="2">
+												@for (int x = 0; x < monData.ele.Length; x++)
+												{
+													<div>
+														@monData.GetEleString(x)
+													</div>
+												}
+											</td>
+											@if (Calculation.expectedHitsToKill.TryGetValue(monsterName, out List<double> hitToKill)){
+												<td colspan="2">
+													@for (int i = 0; i < hitToKill.Count; i++){
+														<div class="row">
+															<div>
+																@(i + 1) hits to kill : @(hitToKill[i].ToString("F1"))%
+															</div>
+														</div>
+													}
+												</td>
+											}
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						}
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+@* 
+<div>
+	@if (Monster.monsterData.TryGetValue(Monster.regions[(int)currentRegion], out MonsterData monsterData))
+	{
+		<style>
+			table, th, td {
+				border: 2px solid black;
+				margin-left: auto;
+				margin-right: auto;
+				text-align: center;
+			}
+
+			th, td, img {
+				max-height: 200px;
+				max-width: 200px;
+			}
+
+			input, select {
+				width: 100%;
+			}
+
+			input {
+				text-align: right;
+			}
+
+			img {
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+			}
+		</style>
+
+
+		@foreach(var mon in monsterData){
+			string monsterName = mon.Key;
+			MonsterPartialData monData = mon.Value;
+
+
+			<h3>Monster Data for @Monster.regions[(int)currentRegion]</h3>
+			<table class="table table-striped">
+				<thread>
+					<tr>
+						<th scope="col">@monsterName</th>
+						<th scope="col"></th>
+					</tr>
+				</thread>
+				<tbody>
+					<tr>
+						<td>Level</td>
+						<td>@monData.level</td>
+					</tr>
+
+					@foreach (PropertyInfo property in typeof(MonsterPartialData).GetProperties())
+					{
+						<tr>
+							<td>@property.Name</td>
+							<td>@property.GetValue(monData)</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+</div> 
+ *@
+@code {
+
+	private string str = "13";
+	private string dex = "4";
+	private string intel = "4";
+	private string luk = "4";
+	private string level = "1";
+
+	private string attack = "17";
+	private string magicAttack = "4";
+	private string accuracy = "4";
+
+	private int currentJob = 0;
+	private Weapons currentWeapon = Weapons.OneHandedSword;
+
+	private string weaponMastery = "10";
+
+	private CharStats charStats;
+
+	private string minDmg = "1";
+	private string maxDmg = "1";
+
+	private string searchItem ="";
+	private string statRatioString = "";
+	private string wattIncrement = "1";
+	private string mattIncrement = "1";
+
+	private string skillPercentage = "100";
+	private string skillLines = "1";
+
+	private string skillDPS = "1";
+
+	private void DoPhysicalCalculations()
+	{
+
+		DamageRange dmgRange = Calculation.GetDamageRange(charStats, currentWeapon);
+
+		if (dmgRange.min < 1)
+		{
+			dmgRange.min = 1;
+		}
+		if (dmgRange.max < 1)
+		{
+			dmgRange.max = 1;
+		}
+		minDmg = dmgRange.min.ToString();
+		maxDmg = dmgRange.max.ToString();
+
+
+		string mainStatString = "";
+		int mainStat = 0;
+		int subStat = 0;
+		float average = (float)(dmgRange.min + dmgRange.max) / 2.0f;
+		skillDPS = (average * float.Parse(skillPercentage) / 100.0f * float.Parse(skillLines)).ToString();
+
+		float statMulti = (Calculation.weaponData[(int)currentWeapon].highStatMulti + (Calculation.weaponData[(int)currentWeapon].lowStatMulti * 0.9f * charStats.mastery)) / 2.0f;
+
+		switch (currentWeapon)
+		{
+			case Weapons.Gun:
+			case Weapons.Bow:
+			case Weapons.Crossbow:
+				mainStatString = " DEX";
+				mainStat = charStats.dex;
+				subStat = charStats.str;
+				break;
+
+			case Weapons.Spear:
+			case Weapons.Polearm:
+			case Weapons.Knuckle:
+			case Weapons.OneHandedSword:
+			case Weapons.OneHandedBW:
+			case Weapons.OneHandedAxe:
+			case Weapons.TwoHandedSword:
+			case Weapons.TwoHandedBW:
+			case Weapons.TwoHandedAxe:
+				mainStatString = " STR";
+				mainStat = charStats.str;
+				subStat = charStats.dex;
+				break;
+			case Weapons.Dagger:
+			case Weapons.Claw:
+				mainStatString = " LUK";
+				mainStat = charStats.luk;
+				subStat = charStats.dex + charStats.str;
+				break;
+		}
+
+		float wattAverage = (mainStat * statMulti + subStat) * (charStats.watt + float.Parse(wattIncrement)) / 100.0f;
+		float avgInc = wattAverage - average;
+
+		float mainStatRatio = (avgInc * 100.0f) / (statMulti / 2.0f * charStats.watt);
+		//testing statMulti
+		//mainStatRatio = subStat;
+		statRatioString = "wep att = " + mainStatRatio.ToString("n2") + mainStatString;
+
+		Calculation.expectedHitsToKill.Clear();
+		foreach (var monsterName in Monster.searchResults)
+		{
+
+			if (Monster.monsterData.TryGetValue(monsterName, out MonsterStats monData))
+			{
+				int levelDiff = Math.Max(monData.level - int.Parse(level), 0);
+				MonsterAccuracyData monsterAccData;
+				monsterAccData.acc100 = (55.2f + 2.15f * levelDiff) * (monData.avoid / 15.0f);
+				monsterAccData.acc1 = monsterAccData.acc100 * 0.5f + 1.0f;
+				monsterAccData.accRatio = 100.0f * ((float.Parse(accuracy) - (monsterAccData.acc100 * 0.5f)) / (monsterAccData.acc100 * 0.5f));
+				if (monsterAccData.accRatio < 0.0f)
+				{
+					monsterAccData.accRatio = 0.0f;
+				}
+				else if (monsterAccData.accRatio > 100.0f)
+				{
+					monsterAccData.accRatio = 100.0f;
+				}
+
+				if (!Calculation.accuracyData.TryAdd(monsterName, monsterAccData))
+				{
+					Calculation.accuracyData[monsterName] = monsterAccData;
+				}
+
+				//Calculation.GetExpectedHitsToKill(monsterName, levelDiff, (int)dmgRange.min, (int)dmgRange.max, monData.hp, monData.defense, int.Parse(skillPercentage), int.Parse(skillLines));
+			}
+
+		}
+	}
+
+	private void DoMagicalCalculations()
+	{
+		int matt = int.Parse(magicAttack);
+		double spellAttack = double.Parse(skillPercentage);
+
+		DamageRange dmgRange = Calculation.GetMagicDamageRange(matt, charStats.intel, spellAttack, charStats.mastery);
+		dmgRange.min = Math.Max(dmgRange.min, 1.0);
+		dmgRange.max = Math.Max(dmgRange.max, 1.0);
+		//minDmg = dmgRange.min.ToString();
+		//maxDmg = dmgRange.max.ToString();
+		minDmg = dmgRange.min.ToString();
+		maxDmg = dmgRange.max.ToString();
+
+		float average = (float)(dmgRange.min + dmgRange.max) / 2.0f;
+		skillDPS = (average * float.Parse(skillLines)).ToString();
+		//MAX = ((magic * magic / 1000 + ((magic + magic * mastery * 0.9) / 2) / 30 + int / 200)) * multi
+		//a = ((x²/ 1000 + ((x + x * y * 0.9) / 2)/ 30 + z / 200) * w
+		//cInt = cMagic * (0.2 * magic + (200 * (1 + 0.9 * mastery) / 60));
+
+		//doing this in parts, its derivatives and shit
+		double part1 = 2.0 * matt / 1000.0;
+		double part2 = (1.0 + charStats.mastery * 0.9) / 60.0;
+		double part3 = 1 / 200.0;
+
+		//double intRatio = int.Parse(mattIncrement) * (part1 + part2) / (part1 + part2 + part3);
+
+		double magicDerivative = (matt / 500.0 + (1.0 + 0.9 * charStats.mastery) / 2.0) / 30;
+		double changeInIntel = double.Parse(mattIncrement) / (1.0 + (1.0 / (200 * magicDerivative)));
+
+		statRatioString = "magic = " + changeInIntel.ToString("n2") + " INT";
+
+		Calculation.expectedHitsToKill.Clear();
+		foreach (var monsterName in Monster.searchResults)
+		{
+
+			if (Monster.monsterData.TryGetValue(monsterName, out MonsterStats? monData))
+			{
+				int levelDiff = Math.Max(monData.level - int.Parse(level), 0);
+
+				double magicAcc = Math.Floor((double)charStats.intel / 10) + Math.Floor((double)charStats.luk / 10);
+
+				MonsterAccuracyData monsterAccData;
+				monsterAccData.acc100 = (float)Math.Floor((monData.avoid + 1.0) * (1.0 + (0.04 * levelDiff)));
+				monsterAccData.acc1 = (float)Math.Round(0.41 * monsterAccData.acc100);
+				double accPart = (magicAcc - monsterAccData.acc1 + 1) / (monsterAccData.acc100 - monsterAccData.acc1 + 1);
+				monsterAccData.accRatio = (float)Math.Clamp(((-0.7011618132 * Math.Pow(accPart, 2)) + (1.702139835 * accPart)) * 100.0, 0.0, 100.0);
+				//comment to force a push
+
+				if (!Calculation.accuracyData.TryAdd(monsterName, monsterAccData))
+				{
+					Calculation.accuracyData[monsterName] = monsterAccData;
+				}
+
+				//Calculation.GetExpectedHitsToKill(monsterName, levelDiff, (int)dmgRange.min, (int)dmgRange.max, monData.hp, monStats.defense, 100, int.Parse(skillLines));
+			}
+
+		}
+	}
+
+	private void CalculateDamage()
+	{
+		SanitizeStrings();
+
+		charStats.str = int.Parse(str);
+		charStats.dex = int.Parse(dex);
+		charStats.intel = int.Parse(intel);
+		charStats.luk = int.Parse(luk);
+
+		charStats.watt = int.Parse(attack);
+		charStats.mastery = float.Parse(weaponMastery) / 100.0f;
+
+		if ((int)currentJob >= (int)ClassID.Magician)
+		{
+			DoMagicalCalculations();
+		}
+		else
+		{
+			DoPhysicalCalculations();
+		}
+
+	}
+
+	private bool isDropDownOpen = false;
+	private void ToggleDropdown()
+	{
+		isDropDownOpen = !isDropDownOpen;
+	}
+	private HashSet<int> openSubmenus = new HashSet<int>();
+	private void ToggleSubmenu(int categoryId)
+	{
+		if (openSubmenus.Contains(categoryId))
+		{
+			openSubmenus.Remove(categoryId);
+		}
+		else
+		{
+			openSubmenus.Add(categoryId);
+		}
+	}
+
+	private void OnJobSelected(ChangeEventArgs e)
+	{
+		// Get the selected index from the dropdown (as a string), then parse it to an integer
+		if (int.TryParse(e.Value?.ToString(), out int selectedIndex) && selectedIndex >= 0 && selectedIndex < JobData.classData.Length)
+		{
+			// Set selectedJob to the job at the selected index
+			currentJob = selectedIndex;
+			currentWeapon = JobData.classData[currentJob].WeaponIDs[0];
+		}
+		statRatioString = "";
+	}
+	private void OnJobSelected(int selectedIndex)
+	{
+		if(selectedIndex >= 0 && selectedIndex < JobData.classData.Length)
+		{
+			currentJob = selectedIndex;
+			currentWeapon = JobData.classData[currentJob].WeaponIDs[0];
+
+			statRatioString = "";
+		}
+	}
+
+	private void OnWeaponSelected(ChangeEventArgs e)
+	{
+		// Get the selected index from the dropdown (as a string), then parse it to an integer
+		if (int.TryParse(e.Value?.ToString(), out int selectedIndex) && selectedIndex >= 0)
+		{
+
+			for (int i = 0; i < JobData.classData[currentJob].WeaponIDs.Length; i++)
+			{
+				if ((Weapons)selectedIndex == JobData.classData[currentJob].WeaponIDs[i])
+				{
+					currentWeapon = (Weapons)selectedIndex;
+					return;
+				}
+			}
+			currentWeapon = JobData.classData[currentJob].WeaponIDs[selectedIndex];
+		}
+		statRatioString = "";
+	}
+
+	protected void UpdateSearch(ChangeEventArgs e)
+	{
+		string? searchIfItem = e.Value?.ToString();
+		Monster.searchResults.Clear();
+		if (searchIfItem == null)
+		{
+			return;
+		}
+
+		searchItem = searchIfItem;
+		if (searchItem.Length > 1)
+		{
+			if (searchItem.Contains("||"))
+			{
+				string[] splitSearch = searchItem.Split("||");
+				for (int i = 0; i < splitSearch.Length; i++)
+				{
+					bool startsWith = splitSearch[i].StartsWith(" ");
+					bool endsWith = splitSearch[i].EndsWith(" ");
+					if (startsWith && endsWith)
+					{
+						if (splitSearch[i].Length > 3)
+						{
+							Monster.Search(splitSearch[i].Substring(1, splitSearch[i].Length - 2), false);
+						}
+					}
+					else if (startsWith)
+					{
+						if (splitSearch[i].Length > 2)
+						{
+							Monster.Search(splitSearch[i].Substring(1), false);
+						}
+					}
+					else if (endsWith)
+					{
+						if (splitSearch[i].Length > 2)
+						{
+							Monster.Search(splitSearch[i].Substring(0, splitSearch[i].Length - 1), false);
+						}
+					}
+				}
+			}
+			else
+			{
+				Monster.Search(searchItem, false);
+			}
+		}
+	}
+
+
+	protected async override Task OnInitializedAsync()
+	{
+		Monster.searchResults.Clear();
+
+		if (Monster.monsterData.Count == 0)
+		{
+			var jsonString = await Http.GetStringAsync("Monsters/monster_stats.json");
+			Monster.InitMonsterData(jsonString);
+		}
+
+		if (Monster.dropTable.Count == 0)
+		{
+			var monsterContent = await Http.GetStringAsync("Monsters/monsters.dt");
+
+			if (monsterContent != null)
+			{
+				if (monsterContent.Length > 0)
+				{
+					Monster.InitMonsterDrops(monsterContent);
+				}
+			}
+		}
+	}
+	private void SanitizeStrings()
+	{
+		if (str == "")
+		{
+			str = "4";
+		}
+		if (dex == "")
+		{
+			dex = "4";
+		}
+		if (intel == "")
+		{
+			intel = "4";
+		}
+		if (luk == "")
+		{
+			luk = "4";
+		}
+		if ((attack == "") || (attack == "0"))
+		{
+			attack = "17";
+		}
+		if (magicAttack == "")
+		{
+			magicAttack = "4";
+		}
+		if (weaponMastery == "")
+		{
+			weaponMastery = "17";
+		}
+		if (accuracy == "")
+		{
+			accuracy = "4";
+		}
+		if (wattIncrement == "")
+		{
+			wattIncrement = "1";
+		}
+		if (mattIncrement == "")
+		{
+			mattIncrement = "1";
+		}
+		if (skillPercentage == "")
+		{
+			skillPercentage = "100";
+		}
+		else if (skillPercentage == "0")
+		{
+			skillPercentage = "100";
+		}
+		if (skillLines == "")
+		{
+			skillLines = "1";
+		}
+		else if (skillLines == "0")
+		{
+			skillLines = "1";
+		}
+		if (level == "0")
+		{
+			level = "1";
+		}
+		else if (level == "")
+		{
+			level = "1";
+		}
+	}
+
+}

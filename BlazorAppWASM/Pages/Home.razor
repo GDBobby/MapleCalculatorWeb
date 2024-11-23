@@ -1,0 +1,57 @@
+﻿@page "/"
+
+@inject HttpClient Http
+@using BlazorApp
+
+
+<PageTitle>Home</PageTitle>
+
+<h1>Maple Calculator</h1>
+<br />
+
+<h3>Credits</h3>
+<p><a href="https://github.com/MrSoupman/Maple-ACC-calculator/tree/master">mrsoupman</a></p>
+<p><a href="https://ayumilovemaple.wordpress.com/2009/09/06/maplestory-formula-compilation/">ayumilove</a></p>
+<p><a href="https://bbb.hidden-street.net">hiddenstreet</a></p>
+<p><a href="https://docs.google.com/spreadsheets/d/1WcnLD2kcizQRMYy-iQcyQpcoMkm9W3ZsJU6X4-NwiDU">2u3s</a></p>
+
+<br />
+<br />
+
+<h3>Contact Info</h3>
+<p>Discord : GDBobby</p>
+<p>Email : corey.w108@gmail.com</p>
+<br />
+
+<br />
+<h3>Todo - Some day</h3>
+<p>* Training guides</p>
+<p>* Skill Data, Skill DPS, recommended skill builds</p>
+<p>* Scrolling Cost Efficiency Calculator</p>
+
+@code{
+
+	protected async override Task OnInitializedAsync()
+	{
+		Monster.searchResults.Clear();
+
+		if (Monster.monsterData.Count == 0)
+		{
+			var jsonString = await Http.GetStringAsync("Monsters/monster_stats.json");
+			Monster.InitMonsterData(jsonString);
+		}
+
+		if (Monster.dropTable.Count == 0)
+		{
+			var monsterContent = await Http.GetStringAsync("Monsters/monsters.dt");
+
+			if (monsterContent != null)
+			{
+				if (monsterContent.Length > 0)
+				{
+					Monster.InitMonsterDrops(monsterContent);
+				}
+			}
+		}
+	}
+}
